@@ -1263,6 +1263,12 @@ tr.cantidad-low td {
   justify-items: end;
   gap: 5px;
 }
+.mini-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
 .mini-action {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1271,6 +1277,11 @@ tr.cantidad-low td {
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 900;
+}
+.mini-action.danger {
+  border-color: color-mix(in srgb, var(--danger) 24%, var(--line));
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .payment-cards {
