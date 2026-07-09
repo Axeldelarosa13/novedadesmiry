@@ -1466,6 +1466,10 @@ function renderClientDetail(client) {
   const total = cargos(client);
   const paid = abonos(client);
   const balance = saldo(client);
+  const addressLine = [
+    client.direccion || "Sin dirección",
+    client.referencia ? `Ref. ${client.referencia}` : ""
+  ].filter(Boolean).join(" - ");
   return `
     <div class="detail-title">
       <div>
@@ -1484,6 +1488,7 @@ function renderClientDetail(client) {
           ${infoBox("Abonado", money.format(paid), "cash", "ok")}
           ${infoBox("Abono semanal", money.format(num(client.credito.abonoSemanal)), "calendar", "info")}
           ${infoBox("Cuenta", esc(accountSummary(client)), "cards")}
+          ${infoBox("DirecciÃ³n / referencia", esc(addressLine), "target")}
           ${infoBox("Crédito", money.format(total), "coin")}
           ${infoBox("Próximo pago", dateFmt.format(parseDate(nextPaymentDate(client))), "clock", statusOf(client).type === "late" ? "danger" : "")}
         </div>
@@ -1901,6 +1906,7 @@ function renderClientModal(client) {
             <label>Nombre<input name="nombre" value="${esc(c.nombre)}" required /></label>
             <label>Teléfono WhatsApp<input name="telefono" value="${esc(c.telefono)}" /></label>
             <label>Dirección<input name="direccion" value="${esc(c.direccion)}" /></label>
+            <label class="full">Referencia de dirección<input name="referencia" value="${esc(c.referencia || "")}" placeholder="Ej. casa azul, frente a la tienda, entre calles..." /></label>
             <label>Producto / Cuenta<input name="institucion" value="${esc(c.tarjeta.institucion || "")}" placeholder="Ej. Celular, mueblería, crédito personal..." /></label>
             <label>Alias de cuenta<input name="alias" value="${esc(c.tarjeta.alias || "")}" /></label>
             <label>Cliente para pagar
