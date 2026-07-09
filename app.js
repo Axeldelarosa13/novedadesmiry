@@ -2298,34 +2298,27 @@ async function optimizeIneImage(file) {
 }
 
 async function uploadInePhoto(dataUrl, fileName = "ine.jpg") {
+  let timeout = null;
   try {
+    const controller = new AbortController();
+    timeout = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(API_UPLOAD_INE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dataUrl, fileName })
+      body: JSON.stringify({ dataUrl, fileName }),
+      signal: controller.signal
     });
+    clearTimeout(timeout);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "No se pudo guardar la foto de INE localmente.");
     return { ...payload, provider: "local-backend" };
   } catch (localError) {
     console.warn("INE local upload fallback:", localError);
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 
-  if (firebaseCloud.ready) {
-    const mimeMatch = String(dataUrl).match(/^data:(image\/(?:jpeg|png|webp));base64,/);
-    const ext = mimeMatch?.[1] === "image/png" ? "png" : mimeMatch?.[1] === "image/webp" ? "webp" : "jpg";
-    const safeName = String(fileName || "ine").replace(/\.[^.]+$/, "").replace(/[^a-z0-9_-]+/gi, "-").slice(0, 40) || "ine";
-    const cloudPath = `${firebaseCloud.storageFolder}/${uid("ine")}-${safeName}.${ext}`;
-    const fileRef = firebaseCloud.storageRef(firebaseCloud.storage, cloudPath);
-    await firebaseCloud.uploadString(fileRef, dataUrl, "data_url");
-    return {
-      provider: "firebase-storage",
-      url: await firebaseCloud.getDownloadURL(fileRef),
-      path: cloudPath
-    };
-  }
-
-  throw new Error("No se pudo guardar la foto de INE.");
+  throw new Error("No se pudo guardar la foto de INE localmente.");
 }
 
 async function loadInePhoto(input) {
@@ -2337,7 +2330,7 @@ async function loadInePhoto(input) {
   const form = input.closest("form");
   const hidden = form?.querySelector('input[name="ineFoto"]');
   const preview = form?.querySelector("[data-ine-preview]");
-  if (preview) preview.innerHTML = `<span>${icon("spinner")} Optimizando y subiendo INE...</span>`;
+  if (preview) preview.innerHTML = `<span>${icon("spinner")} Optimizando y guardando INE...</span>`;
 
   try {
     const optimizedDataUrl = await optimizeIneImage(file);
