@@ -1547,7 +1547,7 @@ function renderMovement(mov) {
       <div><strong>${esc(mov.concepto)}</strong><span>${esc(displayMethod(mov.metodo || mov.tipo || ""))}</span></div>
       <div class="movement-side">
         <div class="amount ${isPay ? "pay" : "charge"}">${isPay ? "-" : "+"}${money.format(Math.abs(num(mov.monto)))}</div>
-        ${isPay ? `<button class="mini-action" data-action="edit-payment" data-id="${mov.id}">${icon("edit")} Editar</button>` : ""}
+        ${isPay ? `<div class="mini-actions"><button class="mini-action" data-action="edit-payment" data-id="${mov.id}">${icon("edit")} Editar</button><button class="mini-action danger" data-action="delete-payment" data-id="${mov.id}">${icon("trash")} Borrar</button></div>` : ""}
       </div>
     </div>
   `;
@@ -1612,6 +1612,7 @@ function renderPaymentsView() {
                     <div class="row-actions">
                       <button class="btn icon soft" data-action="view-payment" data-id="${mov.id}" title="Ver detalle">${icon("eye")}</button>
                       <button class="btn icon soft" data-action="edit-payment" data-id="${mov.id}" title="Editar abono">${icon("edit")}</button>
+                      <button class="btn icon danger" data-action="delete-payment" data-id="${mov.id}" title="Borrar abono">${icon("trash")}</button>
                       <button class="btn icon" data-action="payment-ticket" data-id="${mov.id}" title="Ver ticket">${icon("receipt")}</button>
                     </div>
                   </td>
@@ -1637,6 +1638,7 @@ function renderPaymentCard(mov) {
       <div class="payment-card-actions">
         <button class="btn soft" data-action="view-payment" data-id="${mov.id}">${icon("eye")} Ver</button>
         <button class="btn soft" data-action="edit-payment" data-id="${mov.id}">${icon("edit")} Editar</button>
+        <button class="btn danger" data-action="delete-payment" data-id="${mov.id}">${icon("trash")} Borrar</button>
         <button class="btn" data-action="payment-ticket" data-id="${mov.id}">${icon("receipt")} Ticket</button>
       </div>
     </article>
@@ -2058,6 +2060,7 @@ document.addEventListener("click", async (event) => {
     render();
     return;
   }
+  if (action === "delete-payment") return deletePayment(id);
   if (action === "print-payment-ticket") {
     const found = findPayment(id);
     if (!found) return showToast("Abono no encontrado.", "error");
@@ -2435,6 +2438,19 @@ async function submitPaymentEdit(form) {
   logEvent("Abono editado", `${client.nombre}: ${money.format(amount)} (${method})`, client);
   state.modal = { type: "payment", id: movement.id, mode: "view" };
   await saveDB("Abono actualizado.");
+}
+
+async function deletePayment(paymentId) {
+  const found = findPayment(paymentId);
+  if (!found) return showToast("Abono no encontrado.", "error");
+  const { client, movement } = found;
+  const amount = Math.abs(num(movement.monto));
+  if (!confirm(`¿Borrar este abono de ${money.format(amount)}?`)) return;
+  client.movimientos = (client.movimientos || []).filter((mov) => mov.id !== paymentId);
+  refreshNextPayment(client);
+  logEvent("Abono borrado", `${client.nombre}: ${money.format(amount)}`, client);
+  if (state.modal?.id === paymentId) state.modal = null;
+  await saveDB("Abono borrado.");
 }
 
 async function submitCharge(form) {
