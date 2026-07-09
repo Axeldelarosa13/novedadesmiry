@@ -1,0 +1,15 @@
+{
+  "name": "novedades-muebles-miry-cartera",
+  "version": "2.3.0",
+  "private": true,
+  "description": "App full-stack local optimizada para cobrador: cartera, productos, creditos, abonos, corte, tickets y respaldos.",
+  "scripts": {
+    "start": "node server.js",
+    "serve": "node server.js",
+    "firebase:deploy": "firebase deploy",
+    "firebase:emulators": "firebase emulators:start"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

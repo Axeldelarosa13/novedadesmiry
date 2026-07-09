@@ -1,0 +1,53 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "database.rules.json",
+      "firestore.rules",
+      "storage.rules",
+      ".firebaserc",
+      ".firebase/**",
+      "**/.*",
+      "**/node_modules/**",
+      "data/**",
+      "uploads/**",
+      "server.js",
+      "start-windows.bat",
+      "README.md",
+      "ARCHITECTURE.md",
+      "package.json",
+      "package-lock.json",
+      ".firebaserc.example",
+      "server.pid",
+      "*.zip",
+      "*.log"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css)",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-store" }
+        ]
+      },
+      {
+        "source": "firebase-config.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-store" }
+        ]
+      }
+    ],
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

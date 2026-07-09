@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "apps": {
+      "$appId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
