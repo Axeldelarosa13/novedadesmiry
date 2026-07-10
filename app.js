@@ -13,6 +13,7 @@ const state = {
   view: "panel",
   selectedId: null,
   editItemId: null,
+  editChargeId: null,
   query: "",
   filter: "all",
   paymentQuery: "",
@@ -1379,6 +1380,13 @@ function infoBox(label, value, iconName, tone = "") {
   return `<div class="info-box ${tone}"><span class="info-icon">${icon(iconName)}</span><span>${esc(label)}</span><strong>${value}</strong></div>`;
 }
 
+function paymentConceptOptions(selected = "Abono semanal") {
+  const options = ["Abono semanal", "Abono quincenal", "Enganche"];
+  const value = selected || "Abono semanal";
+  const allOptions = options.includes(value) ? options : [value, ...options];
+  return allOptions.map((option) => `<option value="${esc(option)}" ${option === value ? "selected" : ""}>${esc(option)}</option>`).join("");
+}
+
 function renderIneCard(client) {
   return `
     <div class="card ine-card">
@@ -1466,6 +1474,7 @@ function renderClientDetail(client) {
   const total = cargos(client);
   const paid = abonos(client);
   const balance = saldo(client);
+  const editingCharge = (client.movimientos || []).find((mov) => mov.id === state.editChargeId && num(mov.monto) > 0);
   const addressLine = [
     client.direccion || "Sin dirección",
     client.referencia ? `Ref. ${client.referencia}` : ""
@@ -1510,7 +1519,7 @@ function renderClientDetail(client) {
             <label>Monto<input name="amount" type="number" min="0" step="0.01" value="${num(client.credito.abonoSemanal) || balance}" required /></label>
             <label>Fecha<input name="date" type="date" value="${today()}" required /></label>
             <label>Método<select name="method"><option>Efectivo</option><option>Transferencia</option><option>Depósito</option><option>Otro</option></select></label>
-            <label>Concepto<input name="concept" value="Abono semanal" required /></label>
+            <label>Concepto<select name="concept" required>${paymentConceptOptions("Abono semanal")}</select></label>
             <div class="amount-chips full">
               <button type="button" data-action="fill-amount" data-amount="${Math.min(balance, num(client.credito.abonoSemanal) || balance)}">Abono ${money.format(Math.min(balance, num(client.credito.abonoSemanal) || balance))}</button>
               <button type="button" data-action="fill-amount" data-amount="${balance}">Liquidar ${money.format(balance)}</button>
@@ -1518,15 +1527,15 @@ function renderClientDetail(client) {
             <button class="btn primary full" type="submit">${icon("save")} Aplicar abono</button>
           </div>
         </form>
-        <form class="card" id="chargeForm" data-client="${client.id}">
-          <div class="card-head"><h3>Nuevo cargo / compra</h3></div>
+        <form class="card" id="chargeForm" data-client="${client.id}" data-charge="${editingCharge ? editingCharge.id : ""}">
+          <div class="card-head"><h3>${editingCharge ? "Editar cargo / compra" : "Nuevo cargo / compra"}</h3></div>
           <div class="card-body form-grid">
-            <label>Artículo vendido<select name="itemId"><option value="">Sin artículo</option>${items().map((item) => `<option value="${item.id}">${esc(item.nombre)} (${num(item.cantidad)} disp.)</option>`).join("")}</select></label>
-            <label>Cantidad<input name="quantity" type="number" min="1" step="1" value="1" /></label>
-            <label>Monto<input name="amount" type="number" min="0" step="0.01" required /></label>
-            <label>Fecha<input name="date" type="date" value="${today()}" required /></label>
-            <label class="full">Concepto<input name="concept" placeholder="Renovación, compra, cargo extra" required /></label>
-            <button class="btn soft full" type="submit">${icon("plus")} Agregar cargo</button>
+            <label>Artículo vendido<select name="itemId" ${editingCharge ? "disabled" : ""}><option value="">Sin artículo</option>${items().map((item) => `<option value="${item.id}">${esc(item.nombre)} (${num(item.cantidad)} disp.)</option>`).join("")}</select></label>
+            <label>Cantidad<input name="quantity" type="number" min="1" step="1" value="${editingCharge?.cantidad || 1}" ${editingCharge ? "disabled" : ""} /></label>
+            <label>Monto<input name="amount" type="number" min="0" step="0.01" value="${editingCharge ? Math.abs(num(editingCharge.monto)) : ""}" required /></label>
+            <label>Fecha<input name="date" type="date" value="${editingCharge?.fecha || today()}" required /></label>
+            <label class="full">Concepto<input name="concept" value="${esc(editingCharge?.concepto || "")}" placeholder="Renovación, compra, cargo extra" required /></label>
+            ${editingCharge ? `<button class="btn primary full" type="submit">${icon("save")} Guardar cargo</button><button class="btn full" type="button" data-action="cancel-charge-edit">${icon("close")} Cancelar edición</button>` : `<button class="btn soft full" type="submit">${icon("plus")} Agregar cargo</button>`}
           </div>
         </form>
         <div class="card">
@@ -1552,7 +1561,7 @@ function renderMovement(mov) {
       <div><strong>${esc(mov.concepto)}</strong><span>${esc(displayMethod(mov.metodo || mov.tipo || ""))}</span></div>
       <div class="movement-side">
         <div class="amount ${isPay ? "pay" : "charge"}">${isPay ? "-" : "+"}${money.format(Math.abs(num(mov.monto)))}</div>
-        ${isPay ? `<div class="mini-actions"><button class="mini-action" data-action="edit-payment" data-id="${mov.id}">${icon("edit")} Editar</button><button class="mini-action danger" data-action="delete-payment" data-id="${mov.id}">${icon("trash")} Borrar</button></div>` : ""}
+        ${isPay ? `<div class="mini-actions"><button class="mini-action" data-action="edit-payment" data-id="${mov.id}">${icon("edit")} Editar</button><button class="mini-action danger" data-action="delete-payment" data-id="${mov.id}">${icon("trash")} Borrar</button></div>` : `<div class="mini-actions"><button class="mini-action" data-action="edit-charge" data-id="${mov.id}">${icon("edit")} Editar</button><button class="mini-action danger" data-action="delete-charge" data-id="${mov.id}">${icon("trash")} Borrar</button></div>`}
       </div>
     </div>
   `;
@@ -1859,7 +1868,7 @@ function renderPaymentModal(paymentId, mode = "view") {
                   <label>Monto<input name="amount" type="number" min="0.01" step="0.01" value="${amount}" required /></label>
                   <label>Fecha<input name="date" type="date" value="${esc(movement.fecha || today())}" required /></label>
                   <label>Método<select name="method">${methods.map((method) => `<option ${selectedMethod === method ? "selected" : ""}>${method}</option>`).join("")}</select></label>
-                  <label>Concepto<input name="concept" value="${esc(movement.concepto || "Abono")}" required /></label>
+                  <label>Concepto<select name="concept" required>${paymentConceptOptions(movement.concepto || "Abono semanal")}</select></label>
                 </div>
                 <div class="toolbar payment-edit-actions">
                   <button class="btn" type="button" data-action="view-payment" data-id="${movement.id}">${icon("close")} Cancelar</button>
@@ -2067,6 +2076,18 @@ document.addEventListener("click", async (event) => {
     return;
   }
   if (action === "delete-payment") return deletePayment(id);
+  if (action === "edit-charge") {
+    state.editChargeId = id;
+    render();
+    setTimeout(() => $("#chargeForm")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    return;
+  }
+  if (action === "cancel-charge-edit") {
+    state.editChargeId = null;
+    render();
+    return;
+  }
+  if (action === "delete-charge") return deleteCharge(id);
   if (action === "print-payment-ticket") {
     const found = findPayment(id);
     if (!found) return showToast("Abono no encontrado.", "error");
@@ -2465,9 +2486,25 @@ async function submitCharge(form) {
   const data = new FormData(form);
   const amount = num(data.get("amount"));
   if (amount <= 0) return showToast("El cargo debe ser mayor a cero.", "warning");
+  const chargeId = form.dataset.charge;
+  const editingCharge = chargeId ? (client.movimientos || []).find((mov) => mov.id === chargeId && num(mov.monto) > 0) : null;
+  const date = data.get("date") || today();
+  let concept = String(data.get("concept") || "").trim();
+  if (!concept) return showToast("Captura el concepto del cargo.", "warning");
+  if (editingCharge) {
+    editingCharge.fecha = date;
+    editingCharge.concepto = concept;
+    editingCharge.tipo = "cargo";
+    editingCharge.monto = amount;
+    client.credito.monto = cargos(client);
+    refreshNextPayment(client);
+    state.editChargeId = null;
+    logEvent("Cargo editado", `${client.nombre}: ${money.format(amount)}`, client);
+    await saveDB("Cargo actualizado.");
+    return;
+  }
   const itemId = String(data.get("itemId") || "");
   const quantity = Math.max(0, Math.floor(num(data.get("quantity"))));
-  let concept = String(data.get("concept") || "").trim();
   if (itemId) {
     const item = items().find((row) => row.id === itemId);
     if (!item) return showToast("Artículo no encontrado.", "error");
@@ -2478,14 +2515,31 @@ async function submitCharge(form) {
   }
   client.movimientos.push({
     id: uid("mov"),
-    fecha: data.get("date") || today(),
+    fecha: date,
     tipo: "cargo",
     concepto: concept || "Cargo",
-    monto: amount
+    monto: amount,
+    itemId,
+    cantidad: itemId ? quantity : 0
   });
   client.credito.monto = cargos(client);
+  refreshNextPayment(client);
   logEvent("Cargo agregado", `${client.nombre}: ${money.format(amount)}`, client);
   await saveDB(itemId ? "Cargo agregado y cantidad actualizada." : "Cargo agregado.");
+}
+
+async function deleteCharge(chargeId) {
+  const client = clients().find((row) => (row.movimientos || []).some((mov) => mov.id === chargeId && num(mov.monto) > 0));
+  if (!client) return showToast("Cargo no encontrado.", "error");
+  const movement = (client.movimientos || []).find((mov) => mov.id === chargeId && num(mov.monto) > 0);
+  const amount = Math.abs(num(movement.monto));
+  if (!confirm(`¿Borrar este cargo de ${money.format(amount)}?`)) return;
+  client.movimientos = (client.movimientos || []).filter((mov) => mov.id !== chargeId);
+  client.credito.monto = cargos(client);
+  refreshNextPayment(client);
+  if (state.editChargeId === chargeId) state.editChargeId = null;
+  logEvent("Cargo borrado", `${client.nombre}: ${money.format(amount)}`, client);
+  await saveDB("Cargo borrado.");
 }
 
 async function submitClient(form) {
